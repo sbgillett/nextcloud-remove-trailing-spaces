@@ -72,14 +72,20 @@ $NCRenames | Add-Member -MemberType ScriptProperty -Name RescanPath -Value {
     (Split-Path $this.OldName -Parent) -replace "^$NCDataRoot/"
 }
 
-<#
 #Dedupe and rescan
+#This isn't very efficient and doesn't account for recursion at present
 foreach($RescanPath in $NCRenames.RescanPath | Select -Unique) {
     Write-Verbose "Triggering Nextcloud rescan for $RescanPath"
     sudo -u www-data /var/www/html2/nextcloud/public_html/occ files:scan --path="$RescanPath"
 }
-#>
 
+if(($NCRenames | Measure-Object | Select -ExpandProperty Count) -gt 0) {
+    #delete all file entries that have no matching entries in the storage table.
+    sudo -u www-data /var/www/html2/nextcloud/public_html/occ files:cleanup
+}
+
+#This won't scale well - removed
+<#
 #Trigger rescan of all files for each affected user
 $UsersToRescan = @()
 $RescanPaths = $NCRenames.RescanPath | Select -Unique
@@ -93,5 +99,6 @@ if(($UsersToRescan | Measure-Object | Select -ExpandProperty Count) -gt 0) {
     #delete all file entries that have no matching entries in the storage table.
     sudo -u www-data /var/www/html2/nextcloud/public_html/occ files:cleanup
 }
+#>
 
 #endregion
